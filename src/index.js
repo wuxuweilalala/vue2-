@@ -1,4 +1,10 @@
-const a = 2;
-console.log(a);
+import {initMixin} from "./init";
 
-export default a
+function Vue(options) {
+    this._init(options)
+}
+
+// 扩展原型
+initMixin(Vue)
+
+export default Vue
