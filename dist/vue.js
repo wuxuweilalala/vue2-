@@ -85,6 +85,8 @@
     };
   });
 
+  // 2. 如果数据是数组，会劫持数组的7个方法。并且会对数组中新增的对象进行劫持
+
   var Observe = /*#__PURE__*/function () {
     function Observe(data) {
       _classCallCheck(this, Observe);
@@ -161,17 +163,6 @@
     }
   }
 
-  function initData(vm) {
-    var data = vm.$options.data;
-    data = vm._data = isFunction(data) ? data.call(vm) : data; // data 有可能是个函数
-
-    for (var key in data) {
-      proxy(vm, '_data', key);
-    }
-
-    observe(data);
-  }
-
   function proxy(vm, source, key) {
     Object.defineProperty(vm, key, {
       get: function get() {
@@ -181,6 +172,18 @@
         vm[source][key] = newVal;
       }
     });
+  }
+
+  function initData(vm) {
+    var data = vm.$options.data;
+    data = vm._data = isFunction(data) ? data.call(vm) : data; // data 有可能是个函数
+
+    for (var key in data) {
+      // 对数据进行代理 vm.name => vm.__data.name
+      proxy(vm, '_data', key);
+    }
+
+    observe(data);
   }
 
   function initMixin(Vue) {

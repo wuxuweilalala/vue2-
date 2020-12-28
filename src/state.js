@@ -7,16 +7,6 @@ export function initState(vm) {
         initData(vm)
     }
 }
-
-function initData(vm) {
-    let data = vm.$options.data;
-    data = vm._data = isFunction(data) ? data.call(vm):data; // data 有可能是个函数
-    for(let key in data){
-        proxy(vm,'_data',key)
-    }
-    observe(data)
-}
-
 function  proxy(vm,source,key) {
     Object.defineProperty(vm,key,{
         get(){
@@ -27,3 +17,13 @@ function  proxy(vm,source,key) {
         }
     })
 }
+
+function initData(vm) {
+    let data = vm.$options.data;
+    data = vm._data = isFunction(data) ? data.call(vm):data; // data 有可能是个函数
+    for(let key in data){ // 对数据进行代理 vm.name => vm.__data.name
+        proxy(vm,'_data',key)
+    }
+    observe(data)
+}
+

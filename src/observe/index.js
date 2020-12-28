@@ -1,6 +1,10 @@
 import {isObject} from "../utils";
 import {arrayMethods} from "./array";
 
+// 1. 如果数据是对象，会对对象进行递归劫持
+// 2. 如果数据是数组，会劫持数组的7个方法。并且会对数组中新增的对象进行劫持
+
+
 class Observe {
     constructor(data) {
         Object.defineProperty(data,'__ob__',{
