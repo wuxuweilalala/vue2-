@@ -104,7 +104,22 @@
     var data = vm.$options.data;
     data = vm._data = isFunction(data) ? data.call(vm) : data; // data 有可能是个函数
 
+    for (var key in data) {
+      proxy(vm, '_data', key);
+    }
+
     observe(data);
+  }
+
+  function proxy(vm, source, key) {
+    Object.defineProperty(vm, key, {
+      get: function get() {
+        return vm[source][key];
+      },
+      set: function set(newVal) {
+        vm[source][key] = newVal;
+      }
+    });
   }
 
   function initMixin(Vue) {
