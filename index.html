@@ -12,12 +12,11 @@
         el: '#app',
         data:{
             name:'wxw',
-            age:{
-                hb:'xx'
-            }
+            age:[{name:'xxx'},2,3,4,5,]
         }
     })
-    console.log(vm);
+    vm.age.push({age:18})
+    console.log(vm.age);
 </script>
 </body>
 </html>

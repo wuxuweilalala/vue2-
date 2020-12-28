@@ -49,14 +49,70 @@
     return _typeof(val) === 'object' && val !== null;
   }
 
+  var oldArrayMethods = Array.prototype;
+  var arrayMethods = Object.create(oldArrayMethods);
+  var methods = ['push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice'];
+  methods.forEach(function (method) {
+    arrayMethods[method] = function () {
+      var _console, _oldArrayMethods$meth;
+
+      console.log('数据发生了变化');
+
+      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+
+      (_console = console).log.apply(_console, args);
+
+      var ob = this.__ob__;
+      var inserted;
+
+      (_oldArrayMethods$meth = oldArrayMethods[method]).call.apply(_oldArrayMethods$meth, [this].concat(args));
+
+      switch (method) {
+        case 'push':
+        case 'unshift':
+          inserted = args;
+          break;
+
+        case 'splice':
+          inserted = args.slice(2);
+      }
+
+      if (inserted) {
+        ob.observeArray(inserted);
+      }
+    };
+  });
+
   var Observe = /*#__PURE__*/function () {
     function Observe(data) {
       _classCallCheck(this, Observe);
 
-      this.walk(data);
+      Object.defineProperty(data, '__ob__', {
+        value: this,
+        enumerable: false // 不可枚举，不然会走入死循环
+
+      });
+
+      if (Array.isArray(data)) {
+        // 对能改变原数组的七个方法进行改写，触发更新
+        data.__proto__ = arrayMethods; // 数组中的值如果是对象，应也能触发更新
+
+        this.observeArray(data);
+      } else {
+        this.walk(data);
+      }
     }
 
     _createClass(Observe, [{
+      key: "observeArray",
+      value: function observeArray(data) {
+        data.forEach(function (item) {
+          observe(item);
+        });
+      }
+    }, {
       key: "walk",
       value: function walk(data) {
         Object.keys(data).forEach(function (key) {
@@ -73,6 +129,7 @@
 
     Object.defineProperty(data, key, {
       get: function get() {
+        console.log('get');
         return val;
       },
       set: function set(newVal) {
@@ -86,6 +143,10 @@
   function observe(data) {
     // 如果是对象才检测
     if (!isObject(data)) {
+      return;
+    }
+
+    if (data.__ob__) {
       return;
     }
 
