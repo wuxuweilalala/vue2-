@@ -54,18 +54,14 @@
   var methods = ['push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice'];
   methods.forEach(function (method) {
     arrayMethods[method] = function () {
-      var _console, _oldArrayMethods$meth;
+      var _oldArrayMethods$meth;
 
-      console.log('数据发生了变化');
+      var ob = this.__ob__;
+      var inserted;
 
       for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
         args[_key] = arguments[_key];
       }
-
-      (_console = console).log.apply(_console, args);
-
-      var ob = this.__ob__;
-      var inserted;
 
       (_oldArrayMethods$meth = oldArrayMethods[method]).call.apply(_oldArrayMethods$meth, [this].concat(args));
 
@@ -131,7 +127,6 @@
 
     Object.defineProperty(data, key, {
       get: function get() {
-        console.log('get');
         return val;
       },
       set: function set(newVal) {
@@ -186,8 +181,100 @@
     observe(data);
   }
 
+  var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*";
+  var qnameCapture = "((?:".concat(ncname, "\\:)?").concat(ncname, ")");
+  var startTagOpen = new RegExp("^<".concat(qnameCapture)); // 标签开头的正则 捕获的内容是标签名
+
+  var endTag = new RegExp("^<\\/".concat(qnameCapture, "[^>]*>")); // 匹配标签结尾的 </div>
+
+  var attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/; // 匹配属性的
+
+  var startTagClose = /^\s*(\/?)>/; // 匹配标签结束的 >
+
+  function start(tagName, attributes) {
+    console.log(tagName);
+    console.log(attributes);
+  }
+
+  function end(tagName) {
+    console.log(tagName);
+  }
+
+  function chars(text) {
+    console.log(text);
+  }
+
+  function parseHTMl(html) {
+    function advance(len) {
+      html = html.substring(len);
+    }
+
+    function parseStartTag() {
+      var start = html.match(startTagOpen);
+
+      if (start) {
+        var match = {
+          tagName: start[1],
+          attrs: []
+        };
+        advance(start[0].length);
+
+        var _end, attr;
+
+        while (!(_end = html.match(startTagClose)) && (attr = html.match(attribute))) {
+          match.attrs.push({
+            name: attr[1],
+            value: attr[3] || attr[4] || attr[5]
+          });
+          advance(attr[0].length);
+        }
+
+        if (_end) {
+          advance(_end[0].length);
+        }
+
+        return match;
+      }
+
+      return false;
+    }
+
+    while (html) {
+      //看解析的内容是否存在，如果存在就继续解析
+      var textEnd = html.indexOf('<');
+
+      if (textEnd == 0) {
+        var startTagMath = parseStartTag();
+
+        if (startTagMath) {
+          start(startTagMath.tagName, startTagMath.attrs);
+          continue;
+        }
+
+        var endTagMatch = html.match(endTag);
+
+        if (endTagMatch) {
+          end(endTagMatch[1]);
+          advance(endTagMatch[0].length);
+          continue;
+        }
+      }
+
+      var text = void 0;
+
+      if (textEnd > 0) {
+        text = html.substring(0, textEnd);
+      }
+
+      if (text) {
+        chars(text);
+        advance(text.length);
+      }
+    }
+  }
+
   function compileToFunction(template) {
-    console.log(template);
+    parseHTMl(template);
     return function () {};
   }
 

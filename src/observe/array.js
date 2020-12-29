@@ -5,8 +5,6 @@ const methods = ['push','pop','shift','unshift','reverse','sort','splice'];
 
 methods.forEach(method=>{
     arrayMethods[method] = function (...args) {
-        console.log('数据发生了变化');
-        console.log(...args);
         let ob = this.__ob__;
         let inserted;
         oldArrayMethods[method].call(this,...args)
