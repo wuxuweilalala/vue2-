@@ -159,7 +159,7 @@
     var opt = vm.$options;
 
     if (opt.data) {
-      initData(vm);
+      initData(vm); // 数据劫持
     }
   }
 
@@ -186,12 +186,36 @@
     observe(data);
   }
 
+  function compileToFunction(template) {
+    console.log(template);
+    return function () {};
+  }
+
   function initMixin(Vue) {
     Vue.prototype._init = function (options) {
       var vm = this;
       vm.$options = options; // 对数据进行初始化 watch computed data props
 
       initState(vm);
+
+      if (vm.$options.el) {
+        vm.$mount(vm.$options.el);
+      }
+    };
+
+    Vue.prototype.$mount = function (el) {
+      var vm = this;
+      var options = vm.$options;
+      el = document.querySelector(el);
+
+      if (!options.render) {
+        var template = options.template;
+
+        if (!template && el) {
+          template = el.outerHTML;
+          options.render = compileToFunction(template);
+        }
+      }
     };
   }
 

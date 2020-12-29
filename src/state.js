@@ -4,8 +4,9 @@ import {observe} from "./observe/index";
 export function initState(vm) {
     const opt = vm.$options;
     if(opt.data){
-        initData(vm)
+        initData(vm) // 数据劫持
     }
+
 }
 function  proxy(vm,source,key) {
     Object.defineProperty(vm,key,{
