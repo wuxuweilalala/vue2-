@@ -181,6 +181,7 @@
     observe(data);
   }
 
+  // 将解析后的结果 组装成树结构  组装过程使用栈结构
   var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*";
   var qnameCapture = "((?:".concat(ncname, "\\:)?").concat(ncname, ")");
   var startTagOpen = new RegExp("^<".concat(qnameCapture)); // 标签开头的正则 捕获的内容是标签名
@@ -191,17 +192,54 @@
 
   var startTagClose = /^\s*(\/?)>/; // 匹配标签结束的 >
 
+  function createAstElement(tagName, attrs) {
+    return {
+      tag: tagName,
+      type: 1,
+      children: [],
+      parent: null,
+      attrs: attrs
+    };
+  }
+
+  var root = null;
+  var stack = [];
+
   function start(tagName, attributes) {
-    console.log(tagName);
-    console.log(attributes);
+    var parent = stack[stack.length - 1];
+    var element = createAstElement(tagName, attributes);
+
+    if (!root) {
+      root = element;
+    }
+
+    element.parent = parent;
+
+    if (parent) {
+      element.children.push(element);
+    }
+
+    stack.push(element);
   }
 
   function end(tagName) {
-    console.log(tagName);
+    var last = stack.pop();
+
+    if (last.tag !== tagName) {
+      throw new Error('标签有误');
+    }
   }
 
   function chars(text) {
-    console.log(text);
+    text = text.replace(/\s/g, '');
+    var parent = stack[stack.length - 1];
+
+    if (text) {
+      parent.children.push({
+        type: 3,
+        text: text
+      });
+    }
   }
 
   function parseHTMl(html) {
@@ -275,6 +313,7 @@
 
   function compileToFunction(template) {
     parseHTMl(template);
+    console.log(root);
     return function () {};
   }
 
