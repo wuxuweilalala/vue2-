@@ -2,17 +2,10 @@ import { generate } from './generate';
 import {parserHTML} from './parser';
 
 export function compileToFunction(template) {
-  console.log('template');
-  console.log(template);
   let root = parserHTML(template)
-  console.log('root');
-  console.log(root);
   // 生成代码
   let code = generate(root)
-  console.log('code');
-  console.log(code);
   let render = new Function(`with(this){return ${code}}`); // code 中会用到数据 数据在vm上
-
   return render;
   // render(){
   //     return
