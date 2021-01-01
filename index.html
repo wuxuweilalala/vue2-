@@ -5,20 +5,27 @@
     <title>Vue2 源码</title>
 </head>
 <body>
-<div id="app" name="wxw" style="color: red;background: blue">hello {{name}} world</div>
+<div id="app" name="wxw" style="color: red;background: blue">hello, {{name}}, {{g}}</div>
 <script src="dist/vue.js"></script>
 <script>
     const vm = new Vue({
         el: '#app',
         data:{
             name:'wxw',
+            g:'hjj',
             age:[{name:'xxx'},2,3,4,5,]
         },
       /*render(){
           return h('div',{class:'xxx'})
       }*/
     })
-    vm.age.push({age:18})
+    vm.name='hjj'
+    /*vm.age.push({age:18})
+    setTimeout(()=>{
+        vm.name = 'hjj'
+        vm._update(vm._render())
+    },3000)*/
+
 </script>
 </body>
 </html>

@@ -1,10 +1,11 @@
 import {patch} from "./vdom/patch";
+import Watcher from "./observe/watcher";
 
 export function lifecycleMixin(Vue) {
     Vue.prototype._update = function (vnode) {
         //
         const vm = this;
-        patch(vm.$el,vnode)
+       vm.$el = patch(vm.$el,vnode)
     }
 }
 
@@ -16,5 +17,10 @@ export function mountComponent(vm,el) {
         // 2. 用虚拟 DOM 生成真实 DOM
         vm._update(vm._render())
     }
-    updateComponent()
+
+    new Watcher(vm,updateComponent,()=>{
+        console.log('视图更新了');
+    },true) // true 表示是一个渲染 watcher
+
+    //updateComponent()
 }

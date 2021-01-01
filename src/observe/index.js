@@ -1,5 +1,6 @@
 import {isObject} from "../utils";
 import {arrayMethods} from "./array";
+import {Dep} from "./dep";
 
 // 1. 如果数据是对象，会对对象进行递归劫持
 // 2. 如果数据是数组，会劫持数组的7个方法。并且会对数组中新增的对象进行劫持
@@ -34,13 +35,22 @@ class Observe {
 
 function defineReactive(data,key,val) {
     observe(val) // 如果val是个对象，也需要劫持一下
+    let dep = new Dep()
     Object.defineProperty(data,key,{
         get(){
+            console.log('dep')
+            console.log(dep);
+            if(Dep.target) {
+                dep.depend()
+            }
             return val
         },
         set(newVal){
-            observe(newVal) // 如果给data中的属性赋值了一个新对象，需要对这个对下对象进行劫持
-            val = newVal;
+            if(newVal !== val){
+                observe(newVal) // 如果给data中的属性赋值了一个新对象，需要对这个对下对象进行劫持
+                val = newVal;
+                dep.notify()
+            }
         }
     })
 }

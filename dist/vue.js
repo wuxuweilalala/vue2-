@@ -81,6 +81,50 @@
     };
   });
 
+  var id = 0;
+  var Dep = /*#__PURE__*/function () {
+    //每个属性都要分配一个dep , dep 可以存放 watcher
+    function Dep() {
+      _classCallCheck(this, Dep);
+
+      this.id = id++;
+      this.subs = []; // 存放 watcher
+    }
+
+    _createClass(Dep, [{
+      key: "depend",
+      value: function depend() {
+        if (Dep.target) {
+          Dep.target.addDep(this);
+        }
+      }
+    }, {
+      key: "addSub",
+      value: function addSub(watcher) {
+        this.subs.push(watcher);
+      }
+    }, {
+      key: "notify",
+      value: function notify() {
+        this.subs.forEach(function (watcher) {
+          watcher.update();
+        });
+      }
+    }]);
+
+    return Dep;
+  }();
+  Dep.target = null;
+  function pushTarget(watcher) {
+    console.log('pushTarget');
+    console.log(watcher);
+    Dep.target = watcher;
+  }
+  function popTarget() {
+    console.log('popTarget');
+    Dep.target = null;
+  }
+
   // 2. 如果数据是数组，会劫持数组的7个方法。并且会对数组中新增的对象进行劫持
 
   var Observe = /*#__PURE__*/function () {
@@ -125,14 +169,25 @@
   function defineReactive(data, key, val) {
     observe(val); // 如果val是个对象，也需要劫持一下
 
+    var dep = new Dep();
     Object.defineProperty(data, key, {
       get: function get() {
+        console.log('dep');
+        console.log(dep);
+
+        if (Dep.target) {
+          dep.depend();
+        }
+
         return val;
       },
       set: function set(newVal) {
-        observe(newVal); // 如果给data中的属性赋值了一个新对象，需要对这个对下对象进行劫持
+        if (newVal !== val) {
+          observe(newVal); // 如果给data中的属性赋值了一个新对象，需要对这个对下对象进行劫持
 
-        val = newVal;
+          val = newVal;
+          dep.notify();
+        }
       }
     });
   }
@@ -457,11 +512,58 @@
     return vnode.el;
   }
 
+  var id$1 = 0;
+
+  var Watcher = /*#__PURE__*/function () {
+    // vm,updateComponent,()=>{console.log('视图更新了');},true
+    function Watcher(vm, exprOrFn, cb, options) {
+      _classCallCheck(this, Watcher);
+
+      this.vm = vm;
+      this.exprOrFn = exprOrFn;
+      this.cb = cb;
+      this.options = options;
+      this.id = id$1++;
+      this.getter = exprOrFn;
+      this.deps = [];
+      this.depsId = new Set();
+      this.get();
+    }
+
+    _createClass(Watcher, [{
+      key: "get",
+      value: function get() {
+        pushTarget(this);
+        this.getter();
+        popTarget();
+      }
+    }, {
+      key: "update",
+      value: function update() {
+        this.get();
+      }
+    }, {
+      key: "addDep",
+      value: function addDep(dep) {
+        var id = dep.id;
+
+        if (!this.depsId.has(id)) {
+          // deps 去重 ，避免页面中用到一个数据多次get 进行了多次依赖收集
+          this.depsId.add(id);
+          this.deps.push(dep);
+          dep.addSub(this);
+        }
+      }
+    }]);
+
+    return Watcher;
+  }();
+
   function lifecycleMixin(Vue) {
     Vue.prototype._update = function (vnode) {
       //
       var vm = this;
-      patch(vm.$el, vnode);
+      vm.$el = patch(vm.$el, vnode);
     };
   }
   function mountComponent(vm, el) {
@@ -472,7 +574,10 @@
       vm._update(vm._render());
     };
 
-    updateComponent();
+    new Watcher(vm, updateComponent, function () {
+      console.log('视图更新了');
+    }, true); // true 表示是一个渲染 watcher
+    //updateComponent()
   }
 
   function initMixin(Vue) {
