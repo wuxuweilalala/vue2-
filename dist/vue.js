@@ -48,6 +48,53 @@
   function isObject(val) {
     return _typeof(val) === 'object' && val !== null;
   }
+  var callbacks = [];
+
+  function flushCallbacks() {
+    callbacks.forEach(function (item) {
+      item();
+    });
+    waiting = false;
+  }
+
+  var waiting = false;
+
+  var timerFn = function timerFn() {};
+
+  if (Promise) {
+    // 微任务
+    timerFn = function timerFn() {
+      Promise.resolve().then(flushCallbacks);
+    };
+  } else if (MutationObserver) {
+    // 微任务
+    var textNode = document.createTextNode(1);
+    var observe = new MutationObserver(flushCallbacks);
+    observe.observe(textNode, {
+      characterData: true
+    });
+
+    timerFn = function timerFn() {
+      textNode.textContent = 3;
+    };
+  } else if (setImmediate) {
+    timerFn = function timerFn() {
+      setImmediate(flushCallbacks());
+    };
+  } else {
+    timerFn = function timerFn() {
+      setTimeout(flushCallbacks());
+    };
+  }
+
+  function nextTick(cb) {
+    callbacks.push(cb);
+
+    if (!waiting) {
+      timerFn();
+      waiting = true;
+    }
+  }
 
   var oldArrayMethods = Array.prototype;
   var arrayMethods = Object.create(oldArrayMethods);
@@ -116,12 +163,9 @@
   }();
   Dep.target = null;
   function pushTarget(watcher) {
-    console.log('pushTarget');
-    console.log(watcher);
     Dep.target = watcher;
   }
   function popTarget() {
-    console.log('popTarget');
     Dep.target = null;
   }
 
@@ -151,7 +195,7 @@
       key: "observeArray",
       value: function observeArray(data) {
         data.forEach(function (item) {
-          observe(item);
+          observe$1(item);
         });
       }
     }, {
@@ -167,14 +211,11 @@
   }();
 
   function defineReactive(data, key, val) {
-    observe(val); // 如果val是个对象，也需要劫持一下
+    observe$1(val); // 如果val是个对象，也需要劫持一下
 
     var dep = new Dep();
     Object.defineProperty(data, key, {
       get: function get() {
-        console.log('dep');
-        console.log(dep);
-
         if (Dep.target) {
           dep.depend();
         }
@@ -183,7 +224,7 @@
       },
       set: function set(newVal) {
         if (newVal !== val) {
-          observe(newVal); // 如果给data中的属性赋值了一个新对象，需要对这个对下对象进行劫持
+          observe$1(newVal); // 如果给data中的属性赋值了一个新对象，需要对这个对下对象进行劫持
 
           val = newVal;
           dep.notify();
@@ -192,7 +233,7 @@
     });
   }
 
-  function observe(data) {
+  function observe$1(data) {
     // 如果是对象才检测
     if (!isObject(data)) {
       return;
@@ -233,7 +274,7 @@
       proxy(vm, '_data', key);
     }
 
-    observe(data);
+    observe$1(data);
   }
 
   var defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g; // {{aaaaa}}
@@ -512,6 +553,39 @@
     return vnode.el;
   }
 
+  var queue = [];
+  var has = {};
+  var pending = false;
+
+  function flushSchedulerQueue() {
+    console.log(4);
+
+    for (var i = 0; i < queue.length; i++) {
+      queue[i].run();
+    }
+
+    queue = [];
+    has = {};
+    pending = false;
+  }
+
+  function queueWatcher(watcher) {
+    var id = watcher.id;
+    console.log(11);
+
+    if (has[id] == null) {
+      console.log(2);
+      queue.push(watcher);
+      has[id] = true; // 开启一次更新操作 批处理 防抖
+
+      if (!pending) {
+        console.log(3);
+        setTimeout(flushSchedulerQueue, 0);
+        pending = true;
+      }
+    }
+  }
+
   var id$1 = 0;
 
   var Watcher = /*#__PURE__*/function () {
@@ -540,6 +614,13 @@
     }, {
       key: "update",
       value: function update() {
+        queueWatcher(this); // 多次调用update ，缓存下来，异步更新
+        //this.get()
+      }
+    }, {
+      key: "run",
+      value: function run() {
+        console.log('run');
         this.get();
       }
     }, {
@@ -565,6 +646,8 @@
       var vm = this;
       vm.$el = patch(vm.$el, vnode);
     };
+
+    Vue.prototype.$nextTick = nextTick;
   }
   function mountComponent(vm, el) {
     // 更新函数，数据变化后会再次调用

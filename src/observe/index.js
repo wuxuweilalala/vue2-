@@ -38,8 +38,6 @@ function defineReactive(data,key,val) {
     let dep = new Dep()
     Object.defineProperty(data,key,{
         get(){
-            console.log('dep')
-            console.log(dep);
             if(Dep.target) {
                 dep.depend()
             }

@@ -1,5 +1,6 @@
 import {patch} from "./vdom/patch";
 import Watcher from "./observe/watcher";
+import {nextTick} from "./utils";
 
 export function lifecycleMixin(Vue) {
     Vue.prototype._update = function (vnode) {
@@ -7,6 +8,7 @@ export function lifecycleMixin(Vue) {
         const vm = this;
        vm.$el = patch(vm.$el,vnode)
     }
+    Vue.prototype.$nextTick = nextTick
 }
 
 
