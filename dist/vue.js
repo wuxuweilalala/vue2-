@@ -181,16 +181,105 @@
     observe(data);
   }
 
-  // 将解析后的结果 组装成树结构  组装过程使用栈结构
-  var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*";
-  var qnameCapture = "((?:".concat(ncname, "\\:)?").concat(ncname, ")");
-  var startTagOpen = new RegExp("^<".concat(qnameCapture)); // 标签开头的正则 捕获的内容是标签名
+  var defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g; // {{aaaaa}}
+  // html字符串 =》 字符串  _c('div',{id:'app',a:1},'hello')
 
-  var endTag = new RegExp("^<\\/".concat(qnameCapture, "[^>]*>")); // 匹配标签结尾的 </div>
+  function genProps(attrs) {
+    // [{name:'xxx',value:'xxx'},{name:'xxx',value:'xxx'}]
+    var str = '';
 
-  var attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/; // 匹配属性的
+    for (var i = 0; i < attrs.length; i++) {
+      var attr = attrs[i];
 
-  var startTagClose = /^\s*(\/?)>/; // 匹配标签结束的 >
+      if (attr.name === 'style') {
+        (function () {
+          // color:red;background:blue
+          var styleObj = {};
+          attr.value.replace(/([^;:]+)\:([^;:]+)/g, function () {
+            styleObj[arguments[1]] = arguments[2];
+          });
+          attr.value = styleObj;
+        })();
+      }
+
+      str += "".concat(attr.name, ":").concat(JSON.stringify(attr.value), ",");
+    }
+
+    return "{".concat(str.slice(0, -1), "}");
+  }
+
+  function gen(el) {
+    if (el.type == 1) {
+      // element = 1 text = 3
+      return generate(el);
+    } else {
+      var text = el.text;
+
+      if (!defaultTagRE.test(text)) {
+        return "_v('".concat(text, "')");
+      } else {
+        // 'hello' + arr + 'world'    hello {{arr}} {{aa}} world
+        var tokens = [];
+        var match;
+        var lastIndex = defaultTagRE.lastIndex = 0; // CSS-LOADER 原理一样
+
+        while (match = defaultTagRE.exec(text)) {
+          // 看有没有匹配到
+          var index = match.index; // 开始索引
+
+          if (index > lastIndex) {
+            tokens.push(JSON.stringify(text.slice(lastIndex, index)));
+          }
+
+          tokens.push("_s(".concat(match[1].trim(), ")")); // JSON.stringify()
+
+          lastIndex = index + match[0].length;
+        }
+
+        if (lastIndex < text.length) {
+          tokens.push(JSON.stringify(text.slice(lastIndex)));
+        }
+
+        return "_v(".concat(tokens.join('+'), ")");
+      }
+    }
+  }
+
+  function genChildren(el) {
+    var children = el.children; // 获取儿子
+
+    if (children) {
+      return children.map(function (c) {
+        return gen(c);
+      }).join(',');
+    }
+
+    return false;
+  }
+
+  function generate(el) {
+    //  _c('div',{id:'app',a:1},_c('span',{},'world'),_v())
+    // 遍历树 将树拼接成字符串
+    var children = genChildren(el);
+    var code = "_c('".concat(el.tag, "',").concat(el.attrs.length ? genProps(el.attrs) : 'undefined').concat(children ? ",".concat(children) : '', ")");
+    return code;
+  }
+
+  var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*"; // 标签名
+
+  var qnameCapture = "((?:".concat(ncname, "\\:)?").concat(ncname, ")"); //  用来获取的标签名的 match后的索引为1的
+
+  var startTagOpen = new RegExp("^<".concat(qnameCapture)); // 匹配开始标签的
+
+  var endTag = new RegExp("^<\\/".concat(qnameCapture, "[^>]*>")); // 匹配闭合标签的
+  //           aa  =   "  xxx "  | '  xxxx '  | xxx
+
+  var attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/; // a=b  a="b"  a='b'
+
+  var startTagClose = /^\s*(\/?)>/; //     />   <div/>
+  // ast (语法层面的描述 js css html) vdom （dom节点）
+  // html字符串解析成 对应的脚本来触发 tokens  <div id="app"> {{name}}</div>
+  // 将解析后的结果 组装成一个树结构  栈
 
   function createAstElement(tagName, attrs) {
     return {
@@ -213,10 +302,10 @@
       root = element;
     }
 
-    element.parent = parent;
-
     if (parent) {
-      element.children.push(element);
+      element.parent = parent; // 当放入栈中时 继续父亲是谁
+
+      parent.children.push(element);
     }
 
     stack.push(element);
@@ -231,7 +320,7 @@
   }
 
   function chars(text) {
-    text = text.replace(/\s/g, '');
+    text = text.replace(/\s/g, "");
     var parent = stack[stack.length - 1];
 
     if (text) {
@@ -242,7 +331,7 @@
     }
   }
 
-  function parseHTMl(html) {
+  function parserHTML(html) {
     function advance(len) {
       html = html.substring(len);
     }
@@ -257,7 +346,10 @@
         };
         advance(start[0].length);
 
-        var _end, attr;
+        var _end; // 如果没有遇到标签结尾就不停的解析
+
+
+        var attr;
 
         while (!(_end = html.match(startTagClose)) && (attr = html.match(attribute))) {
           match.attrs.push({
@@ -274,18 +366,18 @@
         return match;
       }
 
-      return false;
+      return false; // 不是开始标签
     }
 
     while (html) {
-      //看解析的内容是否存在，如果存在就继续解析
-      var textEnd = html.indexOf('<');
+      // 看要解析的内容是否存在，如果存在就不停的解析
+      var textEnd = html.indexOf('<'); // 当前解析的开头
 
       if (textEnd == 0) {
-        var startTagMath = parseStartTag();
+        var startTagMatch = parseStartTag(); // 解析开始标签
 
-        if (startTagMath) {
-          start(startTagMath.tagName, startTagMath.attrs);
+        if (startTagMatch) {
+          start(startTagMatch.tagName, startTagMatch.attrs);
           continue;
         }
 
@@ -298,7 +390,7 @@
         }
       }
 
-      var text = void 0;
+      var text = void 0; // //  </div>
 
       if (textEnd > 0) {
         text = html.substring(0, textEnd);
@@ -309,12 +401,31 @@
         advance(text.length);
       }
     }
-  }
+
+    return root;
+  } // 看一下用户是否传入了 , 没传入可能传入的是 template, template如果也没有传递
+  // 将我们的html =》 词法解析  （开始标签 ， 结束标签，属性，文本）
+  // => ast语法树 用来描述html语法的 stack=[]
+  // codegen  <div>hello</div>  =>   _c('div',{},'hello')  => 让字符串执行
+  // 字符串如果转成代码 eval 好性能 会有作用域问题
+  // 模板引擎 new Function + with 来实现
 
   function compileToFunction(template) {
-    parseHTMl(template);
-    console.log(root);
-    return function () {};
+    console.log('template');
+    console.log(template);
+    var root = parserHTML(template);
+    console.log('root');
+    console.log(root); // 生成代码
+
+    var code = generate(root);
+    console.log('code');
+    console.log(code);
+    var render = new Function("with(this){return ".concat(code, "}")); // code 中会用到数据 数据在vm上
+
+    return render; // render(){
+    //     return
+    // }
+    // html=> ast（只能描述语法 语法不存在的属性无法描述） => render函数 + (with + new Function) => 虚拟dom （增加额外的属性） => 生成真实dom
   }
 
   function initMixin(Vue) {
