@@ -29,7 +29,6 @@ class Watcher {
         //this.get()
     }
     run(){
-        console.log('run');
         this.get()
     }
     addDep(dep){

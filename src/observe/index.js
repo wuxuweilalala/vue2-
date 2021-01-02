@@ -8,6 +8,10 @@ import {Dep} from "./dep";
 
 class Observe {
     constructor(data) {
+
+        this.dep = new Dep()
+
+
         Object.defineProperty(data,'__ob__',{
             value:this,
             enumerable:false // 不可枚举，不然会走入死循环
@@ -33,13 +37,29 @@ class Observe {
     }
 }
 
+function dependArray(value) {
+    for(let i =0;i<value.length;i++) {
+        let current = value[i];
+        current.__ob__ && current.__ob__.dep.depend()
+        if(Array.isArray(current)) {
+            dependArray(current)
+        }
+    }
+}
+
 function defineReactive(data,key,val) {
-    observe(val) // 如果val是个对象，也需要劫持一下
+    let childOb = observe(val) // 如果val是个对象，也需要劫持一下
     let dep = new Dep()
     Object.defineProperty(data,key,{
         get(){
             if(Dep.target) {
                 dep.depend()
+                if(childOb){
+                    childOb.dep.depend()
+                    if(Array.isArray(val)) {
+                        dependArray(val)
+                    }
+                }
             }
             return val
         },
@@ -56,7 +76,7 @@ function defineReactive(data,key,val) {
 export function observe(data) {
     // 如果是对象才检测
     if(!isObject(data)) {return}
-    if(data.__ob__) {return }
+    if(data.__ob__) {return data.__ob__}
     return new Observe(data)
 }
 

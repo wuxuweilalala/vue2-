@@ -5,7 +5,8 @@
     <title>Vue2 源码</title>
 </head>
 <body>
-<div id="app" name="wxw" style="color: red;background: blue">hello, {{name}}, {{g}}</div>
+<!--<div id="app" name="wxw" style="color: red;background: blue">hello, {{name}}, {{g}}</div>-->
+<div id="app" name="wxw" style="color: red;background: blue">{{arr}}</div>
 <script src="dist/vue.js"></script>
 <script>
     const vm = new Vue({
@@ -13,22 +14,14 @@
         data:{
             name:'wxw',
             g:'hjj',
-            age:[{name:'xxx'},2,3,4,5,]
+            age:[{name:'xxx'},2,3,4,5,],
+            arr:[[1,2,3,4,5]]
         },
       /*render(){
           return h('div',{class:'xxx'})
       }*/
     })
-        vm.name='hjj'
-        vm.name='hjj1'
-        vm.name='hjj2'
-        vm.name='hjj3'
-
-    /*vm.age.push({age:18})
-    setTimeout(()=>{
-        vm.name = 'hjj'
-        vm._update(vm._render())
-    },3000)*/
+    vm.arr[0].push(1)
 
 </script>
 </body>

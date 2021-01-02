@@ -125,6 +125,8 @@
       if (inserted) {
         ob.observeArray(inserted);
       }
+
+      ob.dep.notify();
     };
   });
 
@@ -175,6 +177,7 @@
     function Observe(data) {
       _classCallCheck(this, Observe);
 
+      this.dep = new Dep();
       Object.defineProperty(data, '__ob__', {
         value: this,
         enumerable: false // 不可枚举，不然会走入死循环
@@ -210,14 +213,33 @@
     return Observe;
   }();
 
+  function dependArray(value) {
+    for (var i = 0; i < value.length; i++) {
+      var current = value[i];
+      current.__ob__ && current.__ob__.dep.depend();
+
+      if (Array.isArray(current)) {
+        dependArray(current);
+      }
+    }
+  }
+
   function defineReactive(data, key, val) {
-    observe$1(val); // 如果val是个对象，也需要劫持一下
+    var childOb = observe$1(val); // 如果val是个对象，也需要劫持一下
 
     var dep = new Dep();
     Object.defineProperty(data, key, {
       get: function get() {
         if (Dep.target) {
           dep.depend();
+
+          if (childOb) {
+            childOb.dep.depend();
+
+            if (Array.isArray(val)) {
+              dependArray(val);
+            }
+          }
         }
 
         return val;
@@ -240,7 +262,7 @@
     }
 
     if (data.__ob__) {
-      return;
+      return data.__ob__;
     }
 
     return new Observe(data);
@@ -558,8 +580,6 @@
   var pending = false;
 
   function flushSchedulerQueue() {
-    console.log(4);
-
     for (var i = 0; i < queue.length; i++) {
       queue[i].run();
     }
@@ -571,15 +591,12 @@
 
   function queueWatcher(watcher) {
     var id = watcher.id;
-    console.log(11);
 
     if (has[id] == null) {
-      console.log(2);
       queue.push(watcher);
       has[id] = true; // 开启一次更新操作 批处理 防抖
 
       if (!pending) {
-        console.log(3);
         setTimeout(flushSchedulerQueue, 0);
         pending = true;
       }
@@ -620,7 +637,6 @@
     }, {
       key: "run",
       value: function run() {
-        console.log('run');
         this.get();
       }
     }, {
