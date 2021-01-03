@@ -268,11 +268,120 @@
     return new Observe(data);
   }
 
+  var queue = [];
+  var has = {};
+  var pending = false;
+
+  function flushSchedulerQueue() {
+    for (var i = 0; i < queue.length; i++) {
+      queue[i].run();
+    }
+
+    queue = [];
+    has = {};
+    pending = false;
+  }
+
+  function queueWatcher(watcher) {
+    var id = watcher.id;
+
+    if (has[id] == null) {
+      queue.push(watcher);
+      has[id] = true; // 开启一次更新操作 批处理 防抖
+
+      if (!pending) {
+        setTimeout(flushSchedulerQueue, 0);
+        pending = true;
+      }
+    }
+  }
+
+  var id$1 = 0;
+
+  var Watcher = /*#__PURE__*/function () {
+    // vm,updateComponent,()=>{console.log('视图更新了');},true
+    function Watcher(vm, exprOrFn, cb, options) {
+      _classCallCheck(this, Watcher);
+
+      this.vm = vm;
+      this.exprOrFn = exprOrFn;
+      this.user = !!options.user;
+      this.cb = cb;
+      this.options = options;
+      this.id = id$1++;
+
+      if (typeof exprOrFn === 'string') {
+        this.getter = function () {
+          var path = exprOrFn.split('.');
+          var obj = vm;
+
+          for (var i = 0; i < path.length; i++) {
+            obj = obj[path[i]];
+          }
+
+          return obj;
+        };
+      } else {
+        this.getter = exprOrFn;
+      }
+
+      this.deps = [];
+      this.depsId = new Set();
+      this.value = this.get();
+    }
+
+    _createClass(Watcher, [{
+      key: "get",
+      value: function get() {
+        pushTarget(this);
+        var value = this.getter();
+        popTarget();
+        return value;
+      }
+    }, {
+      key: "update",
+      value: function update() {
+        queueWatcher(this); // 多次调用update ，缓存下来，异步更新
+        //this.get()
+      }
+    }, {
+      key: "run",
+      value: function run() {
+        var newValue = this.get();
+        var oldValue = this.value;
+        this.value = newValue;
+
+        if (this.user) {
+          // watch 监听属性方法会走
+          this.cb.call(this.vm, newValue, oldValue);
+        }
+      }
+    }, {
+      key: "addDep",
+      value: function addDep(dep) {
+        var id = dep.id;
+
+        if (!this.depsId.has(id)) {
+          // deps 去重 ，避免页面中用到一个数据多次get 进行了多次依赖收集
+          this.depsId.add(id);
+          this.deps.push(dep);
+          dep.addSub(this);
+        }
+      }
+    }]);
+
+    return Watcher;
+  }();
+
   function initState(vm) {
     var opt = vm.$options;
 
     if (opt.data) {
       initData(vm); // 数据劫持
+    }
+
+    if (opt.watch) {
+      initWatch(vm, opt.watch);
     }
   }
 
@@ -297,6 +406,34 @@
     }
 
     observe$1(data);
+  }
+
+  function initWatch(vm, watch) {
+    for (var key in watch) {
+      var handler = watch[key];
+
+      if (Array.isArray(handler)) {
+        for (var i = 0; i < handler.length; i++) {
+          createWatcher(vm, key, handler[i]);
+        }
+      } else {
+        createWatcher(vm, key, handler);
+      }
+    }
+  }
+
+  function createWatcher(vm, key, handler) {
+    return vm.$watch(key, handler);
+  }
+
+  function stateMixin(Vue) {
+    Vue.prototype.$watch = function (key, handler) {
+      var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+      console.log(key);
+      console.log(handler);
+      options.user = true;
+      new Watcher(this, key, handler, options);
+    };
   }
 
   var defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g; // {{aaaaa}}
@@ -575,87 +712,6 @@
     return vnode.el;
   }
 
-  var queue = [];
-  var has = {};
-  var pending = false;
-
-  function flushSchedulerQueue() {
-    for (var i = 0; i < queue.length; i++) {
-      queue[i].run();
-    }
-
-    queue = [];
-    has = {};
-    pending = false;
-  }
-
-  function queueWatcher(watcher) {
-    var id = watcher.id;
-
-    if (has[id] == null) {
-      queue.push(watcher);
-      has[id] = true; // 开启一次更新操作 批处理 防抖
-
-      if (!pending) {
-        setTimeout(flushSchedulerQueue, 0);
-        pending = true;
-      }
-    }
-  }
-
-  var id$1 = 0;
-
-  var Watcher = /*#__PURE__*/function () {
-    // vm,updateComponent,()=>{console.log('视图更新了');},true
-    function Watcher(vm, exprOrFn, cb, options) {
-      _classCallCheck(this, Watcher);
-
-      this.vm = vm;
-      this.exprOrFn = exprOrFn;
-      this.cb = cb;
-      this.options = options;
-      this.id = id$1++;
-      this.getter = exprOrFn;
-      this.deps = [];
-      this.depsId = new Set();
-      this.get();
-    }
-
-    _createClass(Watcher, [{
-      key: "get",
-      value: function get() {
-        pushTarget(this);
-        this.getter();
-        popTarget();
-      }
-    }, {
-      key: "update",
-      value: function update() {
-        queueWatcher(this); // 多次调用update ，缓存下来，异步更新
-        //this.get()
-      }
-    }, {
-      key: "run",
-      value: function run() {
-        this.get();
-      }
-    }, {
-      key: "addDep",
-      value: function addDep(dep) {
-        var id = dep.id;
-
-        if (!this.depsId.has(id)) {
-          // deps 去重 ，避免页面中用到一个数据多次get 进行了多次依赖收集
-          this.depsId.add(id);
-          this.deps.push(dep);
-          dep.addSub(this);
-        }
-      }
-    }]);
-
-    return Watcher;
-  }();
-
   function lifecycleMixin(Vue) {
     Vue.prototype._update = function (vnode) {
       //
@@ -767,6 +823,8 @@
   renderMixin(Vue); // _render
 
   lifecycleMixin(Vue); // _update
+
+  stateMixin(Vue);
 
   return Vue;
 

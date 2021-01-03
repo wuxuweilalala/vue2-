@@ -1,10 +1,14 @@
 import {isFunction} from "./utils";
 import {observe} from "./observe/index";
+import Watcher from "./observe/watcher";
 
 export function initState(vm) {
     const opt = vm.$options;
     if(opt.data){
         initData(vm) // 数据劫持
+    }
+    if(opt.watch){
+        initWatch(vm,opt.watch)
     }
 
 }
@@ -28,3 +32,28 @@ function initData(vm) {
     observe(data)
 }
 
+function initWatch(vm,watch) {
+    for(let key in watch) {
+        let handler = watch[key];
+        if(Array.isArray(handler)) {
+            for(let i=0;i<handler.length;i++) {
+                createWatcher(vm,key,handler[i])
+            }
+        }else {
+            createWatcher(vm,key,handler)
+        }
+
+    }
+}
+function createWatcher(vm,key,handler) {
+    return vm.$watch(key,handler)
+}
+
+export function stateMixin(Vue) {
+    Vue.prototype.$watch = function (key,handler,options = {}) {
+        console.log(key);
+        console.log(handler);
+        options.user = true
+        new Watcher(this,key,handler,options)
+    }
+}

@@ -6,7 +6,7 @@
 </head>
 <body>
 <!--<div id="app" name="wxw" style="color: red;background: blue">hello, {{name}}, {{g}}</div>-->
-<div id="app" name="wxw" style="color: red;background: blue">{{arr}}</div>
+<div id="app" name="wxw" style="color: red;background: blue">{{arr}}/{{age}}</div>
 <script src="dist/vue.js"></script>
 <script>
     const vm = new Vue({
@@ -14,13 +14,28 @@
         data:{
             name:'wxw',
             g:'hjj',
-            age:[{name:'xxx'},2,3,4,5,],
+            age:10,
             arr:[[1,2,3,4,5]]
         },
+        watch:{
+            age(newVal,oldVal){
+                console.log('newVal',newVal);
+                console.log('oldVal',oldVal);
+            },
+            name:[
+                function (a,b) {
+
+                },
+                function (c,d) {
+
+                }
+            ]
+        }
       /*render(){
           return h('div',{class:'xxx'})
       }*/
     })
+    vm.age = 2
     vm.arr[0].push(1)
 
 </script>

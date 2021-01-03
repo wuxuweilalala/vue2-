@@ -8,28 +8,47 @@ class Watcher {
     constructor(vm, exprOrFn, cb, options) {
         this.vm = vm;
         this.exprOrFn = exprOrFn;
+        this.user = !!options.user;
         this.cb = cb;
         this.options = options;
-        this.id = id++
+        this.id = id++;
 
-
-        this.getter = exprOrFn
+        if(typeof exprOrFn === 'string') {
+            this.getter = function () {
+                let path = exprOrFn.split('.');
+                let obj = vm;
+                for(let i=0;i<path.length;i++){
+                    obj = obj[path[i]]
+                }
+                return obj
+            }
+        }else {
+            this.getter = exprOrFn
+        }
         this.deps = []
         this.depsId= new Set()
 
-        this.get()
+        this.value  = this.get()
     }
     get(){
         pushTarget(this)
-        this.getter()
+        const value = this.getter()
         popTarget()
+
+        return value
     }
     update(){
         queueWatcher(this) // 多次调用update ，缓存下来，异步更新
         //this.get()
     }
     run(){
-        this.get()
+        let newValue = this.get();
+        let oldValue = this.value;
+
+        this.value = newValue
+        if(this.user) { // watch 监听属性方法会走
+            this.cb.call(this.vm,newValue,oldValue)
+        }
     }
     addDep(dep){
         let id = dep.id
