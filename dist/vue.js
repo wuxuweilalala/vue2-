@@ -164,11 +164,16 @@
     return Dep;
   }();
   Dep.target = null;
+  var stack = [];
   function pushTarget(watcher) {
+    console.log('watcher');
+    console.log(watcher);
     Dep.target = watcher;
+    stack.push(watcher);
   }
   function popTarget() {
-    Dep.target = null;
+    stack.pop();
+    Dep.target = stack[stack.length - 1];
   }
 
   // 2. 如果数据是数组，会劫持数组的7个方法。并且会对数组中新增的对象进行劫持
@@ -305,7 +310,11 @@
 
       this.vm = vm;
       this.exprOrFn = exprOrFn;
-      this.user = !!options.user;
+      this.user = !!options.user; // watch
+
+      this.lazy = options.lazy;
+      this.dirty = this.lazy; // 计算属性，默认是true
+
       this.cb = cb;
       this.options = options;
       this.id = id$1++;
@@ -327,22 +336,33 @@
 
       this.deps = [];
       this.depsId = new Set();
-      this.value = this.get();
+      this.value = this.lazy ? undefined : this.get();
     }
 
     _createClass(Watcher, [{
       key: "get",
       value: function get() {
         pushTarget(this);
-        var value = this.getter();
+        var value = this.getter.call(this.vm);
         popTarget();
         return value;
       }
     }, {
+      key: "evaluate",
+      value: function evaluate() {
+        this.dirty = false;
+        this.value = this.get();
+        return this.value;
+      }
+    }, {
       key: "update",
       value: function update() {
-        queueWatcher(this); // 多次调用update ，缓存下来，异步更新
-        //this.get()
+        if (this.lazy) {
+          // 是计算属性 就需要重新计算
+          this.dirty = true;
+        } else {
+          queueWatcher(this); // 多次调用update ，缓存下来，异步更新
+        }
       }
     }, {
       key: "run",
@@ -368,6 +388,15 @@
           dep.addSub(this);
         }
       }
+    }, {
+      key: "depend",
+      value: function depend() {
+        var i = this.deps.length;
+
+        while (i--) {
+          this.deps[i].depend();
+        }
+      }
     }]);
 
     return Watcher;
@@ -377,11 +406,17 @@
     var opt = vm.$options;
 
     if (opt.data) {
-      initData(vm); // 数据劫持
+      // 数据劫持
+      initData(vm);
     }
 
     if (opt.watch) {
+      // 监听属性
       initWatch(vm, opt.watch);
+    }
+
+    if (opt.computed) {
+      initComputed(vm, opt.computed);
     }
   }
 
@@ -429,11 +464,53 @@
   function stateMixin(Vue) {
     Vue.prototype.$watch = function (key, handler) {
       var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-      console.log(key);
-      console.log(handler);
       options.user = true;
       new Watcher(this, key, handler, options);
     };
+  }
+
+  function initComputed(vm, computed) {
+    var watchers = vm._computedWatchers = {};
+
+    for (var key in computed) {
+      var userDef = computed[key];
+      var getter = typeof userDef === 'function' ? userDef : userDef.get;
+      watchers[key] = new Watcher(vm, getter, function () {}, {
+        lazy: true
+      });
+      defineComputed(vm, key, userDef);
+    }
+  }
+
+  function createComputedGetter(key) {
+    return function computedGetter() {
+      // 取计算属性的值，走的是这个函数
+      var watcher = this._computedWatchers[key];
+
+      if (watcher.dirty) {
+        watcher.evaluate();
+      }
+
+      if (Dep.target) {
+        console.log(11);
+        watcher.depend();
+      }
+
+      return watcher.value;
+    };
+  }
+
+  function defineComputed(vm, key, userDef) {
+    var sharedProperty = {};
+
+    if (typeof userDef === 'function') {
+      sharedProperty.get = createComputedGetter(key);
+    } else {
+      sharedProperty.get = createComputedGetter(key);
+      sharedProperty.set = userDef.set;
+    }
+
+    Object.defineProperty(vm, key, sharedProperty);
   }
 
   var defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g; // {{aaaaa}}
@@ -547,10 +624,10 @@
   }
 
   var root = null;
-  var stack = [];
+  var stack$1 = [];
 
   function start(tagName, attributes) {
-    var parent = stack[stack.length - 1];
+    var parent = stack$1[stack$1.length - 1];
     var element = createAstElement(tagName, attributes);
 
     if (!root) {
@@ -563,11 +640,11 @@
       parent.children.push(element);
     }
 
-    stack.push(element);
+    stack$1.push(element);
   }
 
   function end(tagName) {
-    var last = stack.pop();
+    var last = stack$1.pop();
 
     if (last.tag !== tagName) {
       throw new Error('标签有误');
@@ -576,7 +653,7 @@
 
   function chars(text) {
     text = text.replace(/\s/g, "");
-    var parent = stack[stack.length - 1];
+    var parent = stack$1[stack$1.length - 1];
 
     if (text) {
       parent.children.push({

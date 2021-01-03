@@ -1,14 +1,18 @@
 import {isFunction} from "./utils";
 import {observe} from "./observe/index";
 import Watcher from "./observe/watcher";
+import {Dep} from "./observe/dep";
 
 export function initState(vm) {
     const opt = vm.$options;
-    if(opt.data){
-        initData(vm) // 数据劫持
+    if(opt.data){// 数据劫持
+        initData(vm)
     }
-    if(opt.watch){
+    if(opt.watch){ // 监听属性
         initWatch(vm,opt.watch)
+    }
+    if(opt.computed) {
+        initComputed(vm,opt.computed)
     }
 
 }
@@ -45,15 +49,56 @@ function initWatch(vm,watch) {
 
     }
 }
+
 function createWatcher(vm,key,handler) {
     return vm.$watch(key,handler)
 }
 
 export function stateMixin(Vue) {
     Vue.prototype.$watch = function (key,handler,options = {}) {
-        console.log(key);
-        console.log(handler);
         options.user = true
         new Watcher(this,key,handler,options)
     }
+}
+
+function initComputed(vm,computed) {
+    const watchers = vm._computedWatchers ={}
+    for(let key in computed) {
+       const userDef =  computed[key]
+
+        let getter = typeof userDef === 'function' ? userDef : userDef.get;
+
+        watchers[key] = new Watcher(vm,getter,()=>{},{lazy:true})
+
+        defineComputed(vm,key,userDef)
+    }
+}
+
+function createComputedGetter(key) {
+    return function computedGetter() { // 取计算属性的值，走的是这个函数
+        let watcher = this._computedWatchers[key]
+        if(watcher.dirty) {
+            watcher.evaluate()
+        }
+        if(Dep.target) {
+            console.log(11);
+            watcher.depend()
+        }
+
+        return watcher.value;
+    }
+}
+
+
+function defineComputed(vm,key,userDef) {
+    let sharedProperty = {};
+
+    if(typeof userDef === 'function') {
+        sharedProperty.get = createComputedGetter(key)
+    }else {
+        sharedProperty.get = createComputedGetter(key)
+        sharedProperty.set = userDef.set
+    }
+
+    Object.defineProperty(vm,key,sharedProperty)
 }

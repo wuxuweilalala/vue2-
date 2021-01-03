@@ -23,10 +23,16 @@ export class Dep { //每个属性都要分配一个dep , dep 可以存放 watche
 
 Dep.target = null;
 
+let stack = [];
+
 export function pushTarget(watcher) {
-    Dep.target = watcher
+    console.log('watcher');
+    console.log(watcher);
+    Dep.target = watcher;
+    stack.push(watcher);
 }
 
 export function popTarget() {
-    Dep.target = null;
+    stack.pop();
+    Dep.target = stack[stack.length-1];
 }

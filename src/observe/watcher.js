@@ -8,7 +8,9 @@ class Watcher {
     constructor(vm, exprOrFn, cb, options) {
         this.vm = vm;
         this.exprOrFn = exprOrFn;
-        this.user = !!options.user;
+        this.user = !!options.user; // watch
+        this.lazy = options.lazy
+        this.dirty = this.lazy;// 计算属性，默认是true
         this.cb = cb;
         this.options = options;
         this.id = id++;
@@ -27,19 +29,27 @@ class Watcher {
         }
         this.deps = []
         this.depsId= new Set()
-
-        this.value  = this.get()
+        this.value  = this.lazy ? undefined : this.get()
     }
     get(){
         pushTarget(this)
-        const value = this.getter()
+        const value = this.getter.call(this.vm)
         popTarget()
 
         return value
     }
+    evaluate(){
+        this.dirty = false;
+        this.value = this.get()
+        return this.value
+    }
     update(){
-        queueWatcher(this) // 多次调用update ，缓存下来，异步更新
-        //this.get()
+        if(this.lazy) { // 是计算属性 就需要重新计算
+            this.dirty = true
+        }else {
+            queueWatcher(this) // 多次调用update ，缓存下来，异步更新
+        }
+
     }
     run(){
         let newValue = this.get();
@@ -58,7 +68,12 @@ class Watcher {
             dep.addSub(this)
         }
     }
-
+    depend(){
+        let i = this.deps.length;
+        while (i--) {
+            this.deps[i].depend()
+        }
+    }
 }
 
 export default Watcher
