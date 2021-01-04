@@ -3,13 +3,13 @@ export function isFunction(val) {
 }
 
 export function isObject(val) {
-    return typeof val  === 'object' && val !== null
+    return typeof val === 'object' && val !== null
 }
 
 const callbacks = []
 
 function flushCallbacks() {
-    callbacks.forEach(item=>{
+    callbacks.forEach(item => {
         item()
     })
     waiting = false
@@ -17,27 +17,28 @@ function flushCallbacks() {
 
 let waiting = false
 
-let timerFn = ()=>{}
+let timerFn = () => {
+}
 
-if(Promise) {// 微任务
-    timerFn = ()=>{
+if (Promise) {// 微任务
+    timerFn = () => {
         Promise.resolve().then(flushCallbacks)
     }
-}else if(MutationObserver) {// 微任务
+} else if (MutationObserver) {// 微任务
     let textNode = document.createTextNode(1)
     let observe = new MutationObserver(flushCallbacks);
-    observe.observe(textNode,{
-        characterData:true
+    observe.observe(textNode, {
+        characterData: true
     })
-    timerFn = ()=>{
+    timerFn = () => {
         textNode.textContent = 3
     }
-}else if(setImmediate) {
-    timerFn = ()=>{
+} else if (setImmediate) {
+    timerFn = () => {
         setImmediate(flushCallbacks())
     }
-}else {
-    timerFn = ()=>{
+} else {
+    timerFn = () => {
         setTimeout(flushCallbacks())
     }
 }
@@ -45,7 +46,7 @@ if(Promise) {// 微任务
 export function nextTick(cb) {
     callbacks.push(cb)
 
-    if(!waiting) {
+    if (!waiting) {
         timerFn()
         waiting = true;
     }
@@ -66,54 +67,61 @@ const lifecycleHooks = [
 
 let strategy = [] // 策略
 
-function mergeHook(parentVal,childVal){
-    if(childVal) {
-        if(parentVal) {
+function mergeHook(parentVal, childVal) {
+    if (childVal) {
+        if (parentVal) {
             return parentVal.concat(childVal)
-        }else {
+        } else {
             return [childVal]
         }
-    }else {
+    } else {
         return parentVal
     }
 }
 
-lifecycleHooks.forEach(hook=>{
+lifecycleHooks.forEach(hook => {
     strategy[hook] = mergeHook;
 })
-strategy.components = function (parentVal,childVal) {
+strategy.components = function (parentVal, childVal) {
     let options = Object.create(parentVal);
 
-    for(let key in childVal) {
+    for (let key in childVal) {
         options[key] = childVal[key]
     }
     return options
 }
 
-export function mergeOptions(parent,child) {
-    const options   = {};
-    for(let key in parent) {
+export function mergeOptions(parent, child) {
+    const options = {};
+    for (let key in parent) {
         mergeField(key)
     }
-    for(let key in child) {
-        if(parent.hasOwnProperty(key)) continue;
+    for (let key in child) {
+        if (parent.hasOwnProperty(key)) continue;
         mergeField(key)
     }
 
     function mergeField(key) {
-        let parentVal  = parent[key]
-        let childVal  = child[key]
+        let parentVal = parent[key]
+        let childVal = child[key]
         // 策略模式
-        if(strategy[key]) {
-            options[key] = strategy[key](parentVal,childVal)
-        }else {
-            if(isObject(parentVal) && isObject(childVal)) {
-                options[key] = {...parentVal,...childVal}
-            }else {
-                options[key] = childVal
+        if (strategy[key]) {
+            options[key] = strategy[key](parentVal, childVal)
+        } else {
+            if (isObject(parentVal) && isObject(childVal)) {
+                options[key] = {...parentVal, ...childVal}
+            } else {
+                options[key] = childVal || parent[key]
             }
         }
 
     }
+
     return options;
+}
+
+export function isReservedTag(tag) {
+    let str = 'a,div,span,p,h1,h2,h3,h4,h5,h6,img,ul,li,button';
+    return str.includes(tag);
+
 }

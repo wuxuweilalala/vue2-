@@ -195,12 +195,16 @@
         if (isObject(parentVal) && isObject(childVal)) {
           options[key] = _objectSpread2(_objectSpread2({}, parentVal), childVal);
         } else {
-          options[key] = childVal;
+          options[key] = childVal || parent[key];
         }
       }
     }
 
     return options;
+  }
+  function isReservedTag(tag) {
+    var str = 'a,div,span,p,h1,h2,h3,h4,h5,h6,img,ul,li,button';
+    return str.includes(tag);
   }
 
   var oldArrayMethods = Array.prototype;
@@ -967,20 +971,41 @@
       children[_key - 3] = arguments[_key];
     }
 
-    return vnode(vm, tag, data, data.key, children, undefined);
+    if (isReservedTag(tag)) {
+      return vnode(vm, tag, data, data.key, children, undefined);
+    } else {
+      var Ctor = vm.$options.components[tag];
+      return createComponent(vm, tag, data, data.key, children, Ctor);
+    }
+  } // 创建组件虚拟节点
+
+  function createComponent(vm, tag, data, key, children, Ctor) {
+    if (isObject(Ctor)) {
+      Ctor = vm.$options._base.extend(Ctor);
+    }
+
+    data.hook = {
+      init: function init() {}
+    };
+    return vnode(vm, "vue-component-".concat(tag), data, key, undefined, undefined, {
+      Ctor: Ctor,
+      children: children
+    });
   }
+
   function createTextElement(vm, text) {
     return vnode(vm, undefined, undefined, undefined, undefined, text);
   }
 
-  function vnode(vm, tag, data, key, children, text) {
+  function vnode(vm, tag, data, key, children, text, componentOptions) {
     return {
       vm: vm,
       tag: tag,
       data: data,
       key: key,
       children: children,
-      text: text // .....
+      text: text,
+      componentOptions: componentOptions // .....
 
     };
   }
