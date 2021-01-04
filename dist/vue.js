@@ -162,6 +162,17 @@
   lifecycleHooks.forEach(function (hook) {
     strategy[hook] = mergeHook;
   });
+
+  strategy.components = function (parentVal, childVal) {
+    var options = Object.create(parentVal);
+
+    for (var key in childVal) {
+      options[key] = childVal[key];
+    }
+
+    return options;
+  };
+
   function mergeOptions(parent, child) {
     var options = {};
 
@@ -919,6 +930,7 @@
     Vue.prototype._init = function (options) {
       var vm = this;
       vm.$options = mergeOptions(vm.constructor.options, options);
+      console.log(vm.$options);
       callHook(vm, 'beforeCreate'); // 对数据进行初始化 watch computed data props
 
       initState(vm);
@@ -1002,8 +1014,26 @@
     Vue.mixin = function (options) {
       this.options = mergeOptions(this.options, options); // Vue.options.beforeCreate = [fn1,fn2]
 
-      console.log(this.options);
       return this;
+    };
+
+    Vue.options._base = Vue;
+    Vue.options.components = {};
+
+    Vue.component = function (id, definition) {
+      definition = this.options._base.extend(definition);
+      this.options.components[id] = definition;
+    };
+
+    Vue.extend = function (opts) {
+      var Sub = function VueComponent() {
+        this._init();
+      };
+
+      Sub.prototype = Object.create(this.prototype);
+      Sub.prototype.constructor = Sub;
+      Sub.options = mergeOptions(this.options, opts);
+      return Sub;
     };
   }
 

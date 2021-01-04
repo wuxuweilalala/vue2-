@@ -9,7 +9,7 @@
 <div id="app" name="wxw" style="color: red;background: blue">{{fullName}}</div>
 <script src="dist/vue.js"></script>
 <script>
-    Vue.mixin({
+    /*Vue.mixin({
         beforeCreate(){
             console.log(1);
         }
@@ -18,6 +18,9 @@
         beforeCreate(){
             console.log(2);
         }
+    })*/
+    Vue.component('my-button',{
+        template: '<button>hello<</button>'
     })
     const vm = new Vue({
         el: '#app',
@@ -27,8 +30,10 @@
             age:10,
             arr:[[1,2,3,4,5]]
         },
-        beforeCreate(){
-            console.log(3);
+        components:{
+          'my-button':{
+              template: '<button>world<</button>'
+          }
         },
         computed:{
             fullName(){

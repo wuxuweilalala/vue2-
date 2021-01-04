@@ -81,7 +81,14 @@ function mergeHook(parentVal,childVal){
 lifecycleHooks.forEach(hook=>{
     strategy[hook] = mergeHook;
 })
+strategy.components = function (parentVal,childVal) {
+    let options = Object.create(parentVal);
 
+    for(let key in childVal) {
+        options[key] = childVal[key]
+    }
+    return options
+}
 
 export function mergeOptions(parent,child) {
     const options   = {};
