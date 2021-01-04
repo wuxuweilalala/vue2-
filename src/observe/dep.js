@@ -26,8 +26,6 @@ Dep.target = null;
 let stack = [];
 
 export function pushTarget(watcher) {
-    console.log('watcher');
-    console.log(watcher);
     Dep.target = watcher;
     stack.push(watcher);
 }

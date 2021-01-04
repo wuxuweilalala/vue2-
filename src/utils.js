@@ -51,3 +51,62 @@ export function nextTick(cb) {
     }
 
 }
+
+
+const lifecycleHooks = [
+    'beforeCreate',
+    'created',
+    'beforeMount',
+    'mounted',
+    'beforeUpdate',
+    'updated',
+    'beforeDestroy',
+    'destroyed'
+]
+
+let strategy = [] // 策略
+
+function mergeHook(parentVal,childVal){
+    if(childVal) {
+        if(parentVal) {
+            return parentVal.concat(childVal)
+        }else {
+            return [childVal]
+        }
+    }else {
+        return parentVal
+    }
+}
+
+lifecycleHooks.forEach(hook=>{
+    strategy[hook] = mergeHook;
+})
+
+
+export function mergeOptions(parent,child) {
+    const options   = {};
+    for(let key in parent) {
+        mergeField(key)
+    }
+    for(let key in child) {
+        if(parent.hasOwnProperty(key)) continue;
+        mergeField(key)
+    }
+
+    function mergeField(key) {
+        let parentVal  = parent[key]
+        let childVal  = child[key]
+        // 策略模式
+        if(strategy[key]) {
+            options[key] = strategy[key](parentVal,childVal)
+        }else {
+            if(isObject(parentVal) && isObject(childVal)) {
+                options[key] = {...parentVal,...childVal}
+            }else {
+                options[key] = childVal
+            }
+        }
+
+    }
+    return options;
+}

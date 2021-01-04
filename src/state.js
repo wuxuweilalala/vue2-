@@ -81,7 +81,6 @@ function createComputedGetter(key) {
             watcher.evaluate()
         }
         if(Dep.target) {
-            console.log(11);
             watcher.depend()
         }
 

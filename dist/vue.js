@@ -42,6 +42,55 @@
     return Constructor;
   }
 
+  function _defineProperty(obj, key, value) {
+    if (key in obj) {
+      Object.defineProperty(obj, key, {
+        value: value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    } else {
+      obj[key] = value;
+    }
+
+    return obj;
+  }
+
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+      if (enumerableOnly) symbols = symbols.filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+      });
+      keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i] != null ? arguments[i] : {};
+
+      if (i % 2) {
+        ownKeys(Object(source), true).forEach(function (key) {
+          _defineProperty(target, key, source[key]);
+        });
+      } else if (Object.getOwnPropertyDescriptors) {
+        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+      } else {
+        ownKeys(Object(source)).forEach(function (key) {
+          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+        });
+      }
+    }
+
+    return target;
+  }
+
   function isFunction(val) {
     return typeof val === 'function';
   }
@@ -94,6 +143,53 @@
       timerFn();
       waiting = true;
     }
+  }
+  var lifecycleHooks = ['beforeCreate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'beforeDestroy', 'destroyed'];
+  var strategy = []; // 策略
+
+  function mergeHook(parentVal, childVal) {
+    if (childVal) {
+      if (parentVal) {
+        return parentVal.concat(childVal);
+      } else {
+        return [childVal];
+      }
+    } else {
+      return parentVal;
+    }
+  }
+
+  lifecycleHooks.forEach(function (hook) {
+    strategy[hook] = mergeHook;
+  });
+  function mergeOptions(parent, child) {
+    var options = {};
+
+    for (var key in parent) {
+      mergeField(key);
+    }
+
+    for (var _key in child) {
+      if (parent.hasOwnProperty(_key)) continue;
+      mergeField(_key);
+    }
+
+    function mergeField(key) {
+      var parentVal = parent[key];
+      var childVal = child[key]; // 策略模式
+
+      if (strategy[key]) {
+        options[key] = strategy[key](parentVal, childVal);
+      } else {
+        if (isObject(parentVal) && isObject(childVal)) {
+          options[key] = _objectSpread2(_objectSpread2({}, parentVal), childVal);
+        } else {
+          options[key] = childVal;
+        }
+      }
+    }
+
+    return options;
   }
 
   var oldArrayMethods = Array.prototype;
@@ -166,8 +262,6 @@
   Dep.target = null;
   var stack = [];
   function pushTarget(watcher) {
-    console.log('watcher');
-    console.log(watcher);
     Dep.target = watcher;
     stack.push(watcher);
   }
@@ -492,7 +586,6 @@
       }
 
       if (Dep.target) {
-        console.log(11);
         watcher.depend();
       }
 
@@ -799,7 +892,8 @@
     Vue.prototype.$nextTick = nextTick;
   }
   function mountComponent(vm, el) {
-    // 更新函数，数据变化后会再次调用
+    callHook(vm, 'beforeMount'); // 更新函数，数据变化后会再次调用
+
     var updateComponent = function updateComponent() {
       // 1. 调用render生成虚拟 DOM
       // 2. 用虚拟 DOM 生成真实 DOM
@@ -811,13 +905,24 @@
     }, true); // true 表示是一个渲染 watcher
     //updateComponent()
   }
+  function callHook(vm, hook) {
+    var handlers = vm.$options[hook];
+
+    if (handlers) {
+      for (var i = 0; i < handlers.length; i++) {
+        handlers[i].call(vm);
+      }
+    }
+  }
 
   function initMixin(Vue) {
     Vue.prototype._init = function (options) {
       var vm = this;
-      vm.$options = options; // 对数据进行初始化 watch computed data props
+      vm.$options = mergeOptions(vm.constructor.options, options);
+      callHook(vm, 'beforeCreate'); // 对数据进行初始化 watch computed data props
 
       initState(vm);
+      callHook(vm, 'created');
 
       if (vm.$options.el) {
         vm.$mount(vm.$options.el);
@@ -891,6 +996,17 @@
     };
   }
 
+  function initGlobalApi(Vue) {
+    Vue.options = {}; // 用来存放全局的配置 Vue.component Vue.filter Vue.directive
+
+    Vue.mixin = function (options) {
+      this.options = mergeOptions(this.options, options); // Vue.options.beforeCreate = [fn1,fn2]
+
+      console.log(this.options);
+      return this;
+    };
+  }
+
   function Vue(options) {
     this._init(options);
   } // 扩展原型
@@ -901,7 +1017,10 @@
 
   lifecycleMixin(Vue); // _update
 
-  stateMixin(Vue);
+  stateMixin(Vue); // $watch
+  // 在类上面进行扩展 Vue.mixin
+
+  initGlobalApi(Vue);
 
   return Vue;
 

@@ -9,6 +9,16 @@
 <div id="app" name="wxw" style="color: red;background: blue">{{fullName}}</div>
 <script src="dist/vue.js"></script>
 <script>
+    Vue.mixin({
+        beforeCreate(){
+            console.log(1);
+        }
+    })
+    Vue.mixin({
+        beforeCreate(){
+            console.log(2);
+        }
+    })
     const vm = new Vue({
         el: '#app',
         data:{
@@ -17,9 +27,11 @@
             age:10,
             arr:[[1,2,3,4,5]]
         },
+        beforeCreate(){
+            console.log(3);
+        },
         computed:{
             fullName(){
-                console.log('full');
                 return this.name+this.g
             },
             test:{
