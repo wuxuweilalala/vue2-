@@ -16,8 +16,8 @@ export function initGlobalApi(Vue) {
     }
 
     Vue.extend =  function (opts) {
-        const Sub = function VueComponent() {
-            this._init()
+        const Sub = function VueComponent(options) {
+            this._init(options)
         }
         Sub.prototype = Object.create(this.prototype)
         Sub.prototype.constructor = Sub;

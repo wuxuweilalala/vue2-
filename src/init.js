@@ -7,7 +7,6 @@ export function initMixin(Vue){
     Vue.prototype._init = function (options) {
         const vm = this
         vm.$options = mergeOptions(vm.constructor.options,options);
-        console.log(vm.$options);
         callHook(vm,'beforeCreate')
         // 对数据进行初始化 watch computed data props
         initState(vm)
@@ -15,6 +14,7 @@ export function initMixin(Vue){
         if(vm.$options.el){
             vm.$mount(vm.$options.el)
         }
+
     }
     Vue.prototype.$mount = function (el) {
         const vm = this;
@@ -25,8 +25,8 @@ export function initMixin(Vue){
             let template = options.template;
             if(!template && el) {
                 template = el.outerHTML;
-                options.render = compileToFunction(template)
             }
+            options.render = compileToFunction(template)
         }
         mountComponent(vm,el) //组件的挂载流程
     }
