@@ -11,7 +11,6 @@ class Observe {
 
         this.dep = new Dep()
 
-
         Object.defineProperty(data,'__ob__',{
             value:this,
             enumerable:false // 不可枚举，不然会走入死循环
