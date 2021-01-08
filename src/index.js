@@ -17,4 +17,22 @@ stateMixin(Vue) // $watch
 // 在类上面进行扩展 Vue.mixin
 initGlobalApi(Vue)
 
+
+import {compileToFunction} from './compiler/index';
+import {createElm,patch} from './vdom/patch';
+
+// diff
+let oldTemplate = `<div style="color: red;">{{msg}}</div>`;
+const render1 = compileToFunction(oldTemplate);
+let vm1 = new Vue({data:{msg:'wxw'}});
+const oldVnode = render1.call(vm1);
+console.log(oldVnode);
+document.body.appendChild(createElm(oldVnode))
+
+let newTemplate = `<div  style="color: blue">{{msg}}</div>`;
+const render2 = compileToFunction(newTemplate);
+let vm2 = new Vue({data:{msg:'hjj'}});
+const newVnode = render2.call(vm2);
+patch(oldVnode,newVnode)
+
 export default Vue
