@@ -22,17 +22,19 @@ import {compileToFunction} from './compiler/index';
 import {createElm,patch} from './vdom/patch';
 
 // diff
-let oldTemplate = `<div style="color: red;">{{msg}}</div>`;
+let oldTemplate = `<div style="color: red;background: blue" a="1"></div>`;
 const render1 = compileToFunction(oldTemplate);
 let vm1 = new Vue({data:{msg:'wxw'}});
 const oldVnode = render1.call(vm1);
-console.log(oldVnode);
 document.body.appendChild(createElm(oldVnode))
 
-let newTemplate = `<div  style="color: blue">{{msg}}</div>`;
+let newTemplate = `<div  style="color: blue;background: red" b="2">{{msg}}</div>`;
 const render2 = compileToFunction(newTemplate);
 let vm2 = new Vue({data:{msg:'hjj'}});
 const newVnode = render2.call(vm2);
-patch(oldVnode,newVnode)
+
+setTimeout(()=>{
+    patch(oldVnode,newVnode)
+},1000)
 
 export default Vue

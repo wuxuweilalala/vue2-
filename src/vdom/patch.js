@@ -19,27 +19,68 @@ export function patch(oldVnode, vnode) {
       // vnode.el 属性是当前虚拟dom 的真实dom
      return oldVnode.el.parentNode.replaceChild(createElm(vnode), oldVnode.el);
     }
+    // 如果标签一样就比较属性,属性可能有删除的时候
+    let el = vnode.el = oldVnode.el; // 表示当前新节点 服用老节点
+    patchProps(vnode,oldVnode.data) // 对比属性
+
+
     // 2. 如果两个虚拟节点是文本节点，比较文本节点
+    if(vnode.tag === undefined) {
+      if(oldVnode.text !== vnode.text) {
+        el.textContent = vnode.text;
+      }
+      return
+    }
 
-    // 如果标签一样就比较属性
-    //patchProps(vnode,oldVnode)
 
+
+    // 一方有子节点 一方没有子节点
+    let oldChildren = oldVnode.children || [];
+    let newChildren = vnode.children || [];
+
+    if(oldChildren.length > 0 && newChildren.length > 0) { // 双方都有子节点
+
+    }else if(newChildren.length > 0) { // 老的没子节点 新的有子节点
+      for(let i =0;i<newChildren.length;i++) { // 循环创建新节点
+        let child = createElm(newChildren[i])
+        el.appendChild(child)
+      }
+    }else if(oldChildren.length > 0) { // 新的没子节点 老的有子节点
+      el.innerHTML = ``; // 直接删除老节点
+    }
+    // vue 每个组件都有一个 watcher ，当前组件中数据变化 只需要更新当前组件
   }
 }
 
-function patchProps(vnode) { // 初次渲染时调用，后续更新也可以调用
-  let props = vnode.data || {};
-  for(let key in props){
+function patchProps(vnode,oldProps= {}) { // 初次渲染时调用，后续更新也可以调用
+  let newProps = vnode.data || {};
+  let el = vnode.el;
+  let newStyle = newProps.style || {}
+  let oldStyle = oldProps.style || {}
+
+  // 如果老的属性有 新的没有直接删除
+  for(let key in oldStyle) {
+    if(!newStyle[key]) { // 新的style 不存在这个样式
+      el.style[key] = ''
+    }
+  }
+
+  for(let key in oldProps) {
+    if(!newProps[key]) {
+      el.removeAttribute(key)
+    }
+  }
+
+  for(let key in newProps){
     if(key ===  'style') {
-      for(let styleName in props[key]) {
-        vnode.el.style[styleName] = props[key][styleName]
+      for(let styleName in newProps[key]) {
+        el.style[styleName] = newProps.style[styleName]
       }
     }else {
-      vnode.el.setAttribute(key,props[key])
+      el.setAttribute(key,newProps[key])
     }
   }
 }
-
 
 function createComponent(vnode) {
   let i = vnode.data; //  vnode.data.hook.init
@@ -49,7 +90,6 @@ function createComponent(vnode) {
   if (vnode.componentInstance) { // 有属性说明子组件new完毕了，并且组件对应的真实DOM挂载到了componentInstance.$el
     return true;
   }
-
 }
 // 创建真实节点
 export function createElm(vnode) {
