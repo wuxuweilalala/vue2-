@@ -22,13 +22,23 @@ import {compileToFunction} from './compiler/index';
 import {createElm,patch} from './vdom/patch';
 
 // diff
-let oldTemplate = `<div style="color: red;background: blue" a="1"></div>`;
+let oldTemplate = `<div>
+<li>A</li>
+<li>B</li>
+<li>C</li>
+<li>D</li>
+</div>`;
 const render1 = compileToFunction(oldTemplate);
 let vm1 = new Vue({data:{msg:'wxw'}});
 const oldVnode = render1.call(vm1);
 document.body.appendChild(createElm(oldVnode))
 
-let newTemplate = `<div  style="color: blue;background: red" b="2">{{msg}}</div>`;
+let newTemplate = `<div>
+<li>D</li>
+<li>A</li>
+<li>B</li>
+<li>C</li>
+</div>`;
 const render2 = compileToFunction(newTemplate);
 let vm2 = new Vue({data:{msg:'hjj'}});
 const newVnode = render2.call(vm2);
