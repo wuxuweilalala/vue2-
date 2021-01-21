@@ -18,6 +18,7 @@ stateMixin(Vue) // $watch
 initGlobalApi(Vue)
 
 
+/*
 import {compileToFunction} from './compiler/index';
 import {createElm,patch} from './vdom/patch';
 
@@ -46,5 +47,6 @@ const newVnode = render2.call(vm2);
 setTimeout(()=>{
     patch(oldVnode,newVnode)
 },1000)
+*/
 
 export default Vue

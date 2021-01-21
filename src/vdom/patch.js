@@ -51,6 +51,7 @@ export function patch(oldVnode, vnode) {
             el.innerHTML = ``; // 直接删除老节点
         }
         // vue 每个组件都有一个 watcher ，当前组件中数据变化 只需要更新当前组件
+        return el
     }
 }
 

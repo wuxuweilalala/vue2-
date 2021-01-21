@@ -9,23 +9,24 @@
 <!--<div id="app" name="wxw" style="color: red;background: blue">
     <my-button></my-button>
 </div>-->
+<div id="app">
+    <li>
+        {{name}}
+    </li>
+   </div>
 <script src="dist/vue.js"></script>
 <script>
-
-    /*const vm = new Vue({ // .__proto__
-        el: '#app',
+    const vm = new Vue({
+        el:"#app",
         data:{
-            name:'wxw',
-            g:'hjj',
-            age:10,
-            arr:[[1,2,3,4,5]]
-        },
-        components:{
-            'my-button':{
-                template: '<button>world</button>'
-            }
+            name:'wxw'
         }
-    });*/
+    });
+    setTimeout(()=>{
+        vm.name = 'hjj'
+    },2000)
+
+
 </script>
 </body>
 </html>
