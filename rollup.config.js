@@ -4,7 +4,7 @@ export default {
     input:'./src/index.js',
     output:{
         format:'umd', // 支持 amd 和 commonjs规范
-        name:'Vue',
+        name:'Vue', // 打包后全局变量的名字
         file:'dist/vue.js',
         sourcemap:true // es5 => es6 源代码
     },

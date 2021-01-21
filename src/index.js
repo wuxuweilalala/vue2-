@@ -23,10 +23,10 @@ import {createElm,patch} from './vdom/patch';
 
 // diff
 let oldTemplate = `<div>
-<li>A</li>
-<li>B</li>
-<li>C</li>
-<li>D</li>
+<li key="C">C</li>
+<li key="A">A</li>
+<li key="B">B</li>
+<li key="D">D</li>
 </div>`;
 const render1 = compileToFunction(oldTemplate);
 let vm1 = new Vue({data:{msg:'wxw'}});
@@ -34,10 +34,10 @@ const oldVnode = render1.call(vm1);
 document.body.appendChild(createElm(oldVnode))
 
 let newTemplate = `<div>
-<li>D</li>
-<li>A</li>
-<li>B</li>
-<li>C</li>
+<li key="B">B</li>
+<li key="C">C</li>
+<li key="D">D</li>
+<li key="A">A</li>
 </div>`;
 const render2 = compileToFunction(newTemplate);
 let vm2 = new Vue({data:{msg:'hjj'}});

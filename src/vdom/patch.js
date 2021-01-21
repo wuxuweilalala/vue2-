@@ -1,9 +1,11 @@
+// dom 的生成  html => ast => render 函数 => 虚拟节点vDom => 真实节点
+// 如果直接操作dom 和vue无关， 则更新时不需要重新创建ast
 export function patch(oldVnode, vnode) {
     if (!oldVnode) {
         return createElm(vnode); // 如果没有el元素，那就直接根据虚拟节点返回真实节点
     }
 
-    if (oldVnode.nodeType == 1) {
+    if (oldVnode.nodeType == 1) { // 初始化
         // 用vnode  来生成真实dom 替换原本的dom元素
         const parentElm = oldVnode.parentNode; // 找到他的父亲
         let elm = createElm(vnode); //根据虚拟节点 创建元素
@@ -13,7 +15,7 @@ export function patch(oldVnode, vnode) {
         parentElm.removeChild(oldVnode);
 
         return elm;
-    } else {//  vnode diff
+    } else {//  vnode diff 后续更新
         // 1. 如果标签名称不一样 则删掉老节点 换成新节点即可
         if (oldVnode.tag !== vnode.tag) {
             // vnode.el 属性是当前虚拟dom 的真实dom
@@ -21,8 +23,8 @@ export function patch(oldVnode, vnode) {
         }
         // 如果标签一样就比较属性,属性可能有删除的时候
         let el = vnode.el = oldVnode.el; // 表示当前新节点 服用老节点
-        patchProps(vnode, oldVnode.data) // 对比属性
 
+        patchProps(vnode, oldVnode.data) // 对比属性
 
         // 2. 如果两个虚拟节点是文本节点，比较文本节点
         if (vnode.tag === undefined) {
@@ -31,7 +33,6 @@ export function patch(oldVnode, vnode) {
             }
             return
         }
-
 
         // 一方有子节点 一方没有子节点
         let oldChildren = oldVnode.children || [];
@@ -69,8 +70,26 @@ function patchChildren(el, oldChildren, newChildren) {
     let newEndIndex = newChildren.length - 1;
     let newEndVNode = newChildren[newEndIndex];
 
+    const makeIndexByKey = (children) => {
+        children.reduce((memo,current,index)=>{
+            if(current.key) {
+                memo[current.key] = index
+            }
+            return memo
+        },{})
+    }
+    const keyMap = makeIndexByKey(oldChildren)
+
     while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
-        // 双指针循环
+        // 双指针循环 头头比较 尾尾比较 头尾比较 尾头比较
+        // 优化了 向后添加 向前添加 尾巴移动到头 头移动到尾巴
+
+        if(!oldStartVNode) { // 已经被移动走了  由乱序比对 oldChildren[moveIndex] = null 引起
+            oldStartVNode = oldChildren[++oldStartIndex]
+        }else if(!oldEndVNode) {
+            oldEndVNode = oldChildren[--oldEndVNode]
+        }
+
         if (isSameVNode(oldStartVNode, newStartVNode)) {// 从头部开始 diff
             patch(oldStartVNode, newStartVNode);
             oldStartVNode = oldChildren[++oldStartIndex]
@@ -89,9 +108,21 @@ function patchChildren(el, oldChildren, newChildren) {
             el.insertBefore(oldEndVNode.el,oldStartVNode.el);
             oldEndVNode = oldChildren[--oldEndIndex];
             newStartVNode = newChildren[++newStartIndex];
+        }else { // 乱序比对  前面都是在做优化 这个乱序比对才是核心方法
+            //  需要根据 key 和对应的索引将老的内容生成映射表
+            let moveIndex = keyMap[newStartVNode.key];
+            if(moveIndex == undefined) { // 如果不能复用 直接创建新的插入到老的节点前面
+                el.insertBefore(createElm(newStartVNode),oldStartVNode.el)
+            }else {
+                let moveNode = oldChildren[moveIndex];
+                oldChildren[moveIndex] = null; // 此节点已经被移动走了
+                el.insertBefore(moveNode.el,oldStartVNode.el);
+                patch(moveNode,newStartVNode) // 比较两个节点的属性
+            }
+            newStartVNode = newChildren[++newStartIndex];
         }
     }
-    // 新节点比老节点多
+    // 新节点比老节点多  多余的新节点插入到老节点中
     if (newStartIndex <= newEndIndex) {
         for (let i = newStartIndex; i <= newEndIndex; i++) {
             //el.appendChild(createElm(newChildren[i]))
@@ -99,10 +130,12 @@ function patchChildren(el, oldChildren, newChildren) {
             el.insertBefore(createElm(newChildren[i]), anchor)
         }
     }
-    // 新节点比老节点少
+    // 新节点比老节点少 老的多余的节点删除
     if (oldStartIndex <= oldEndIndex) {
         for (let i = oldStartIndex; i <= oldEndIndex; i++) {
-            el.removeChild(oldChildren[i].el)
+            if(oldChildren[i] !== null) {
+                el.removeChild(oldChildren[i].el)
+            }
         }
     }
 

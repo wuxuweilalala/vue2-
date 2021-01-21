@@ -46,7 +46,6 @@ function initWatch(vm,watch) {
         }else {
             createWatcher(vm,key,handler)
         }
-
     }
 }
 
