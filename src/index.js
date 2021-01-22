@@ -18,35 +18,5 @@ stateMixin(Vue) // $watch
 initGlobalApi(Vue)
 
 
-/*
-import {compileToFunction} from './compiler/index';
-import {createElm,patch} from './vdom/patch';
-
-// diff
-let oldTemplate = `<div>
-<li key="C">C</li>
-<li key="A">A</li>
-<li key="B">B</li>
-<li key="D">D</li>
-</div>`;
-const render1 = compileToFunction(oldTemplate);
-let vm1 = new Vue({data:{msg:'wxw'}});
-const oldVnode = render1.call(vm1);
-document.body.appendChild(createElm(oldVnode))
-
-let newTemplate = `<div>
-<li key="B">B</li>
-<li key="C">C</li>
-<li key="D">D</li>
-<li key="A">A</li>
-</div>`;
-const render2 = compileToFunction(newTemplate);
-let vm2 = new Vue({data:{msg:'hjj'}});
-const newVnode = render2.call(vm2);
-
-setTimeout(()=>{
-    patch(oldVnode,newVnode)
-},1000)
-*/
 
 export default Vue
