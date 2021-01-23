@@ -10,6 +10,7 @@ const callbacks = [];
 
 function flushCallbacks() {
     callbacks.forEach(cb => cb());
+    callbacks.length = 0;
     waiting = false
 }
 let waiting = false;
